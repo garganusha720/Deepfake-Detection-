@@ -1,14 +1,14 @@
-Deepfake Detection using PPG Maps + XceptionNet
+# Deepfake Detection using PPG Maps + XceptionNet
 A computer vision project for detecting deepfake videos by extracting Photoplethysmography (PPG) signal maps from facial regions and classifying them using a fine-tuned XceptionNet, benchmarked against a baseline CNN trained from scratch.
 
 
-Overview
+## Overview
 Deepfake detection is approached here as an image classification problem on PPG signal maps — physiological signals derived from subtle colour changes in facial skin that are disrupted by face manipulation techniques. Each video is converted into one or more (224×224×3) PPG map images, which are then classified as real or fake.
 
 A baseline CNN trained from scratch is compared head-to-head against XceptionNet pretrained on ImageNet, providing an empirical justification for transfer learning in this domain.
 
 
-Datasets
+## Datasets
 FaceForensics++ (FF++)
 600 real videos (original)
 600 fake videos across 6 manipulation types:
@@ -23,33 +23,20 @@ CelebDF v2
 590 real videos (Celeb-real)
 590 fake videos sampled from 5,639 available (Celeb-synthesis), using random.seed(42) for reproducibility
 Total: 1,180 videos
-Combined
-Split
-Videos
-Real
-Fake
-Train (80%)
-1,904
-952
-952
-Val (10%)
-238
-119
-119
-Test (10%)
-238
-119
-119
-Total
-2,380
-1,190
-1,190
+## Combined
+
+| Split        | Videos | Real | Fake |
+|-------------|--------|------|------|
+| Train (80%) | 1,904  | 952  | 952  |
+| Val (10%)   | 238    | 119  | 119  |
+| Test (10%)  | 238    | 119  | 119  |
+| **Total**   | **2,380** | **1,190** | **1,190** |
 
 
-Important: The train/val/test split is performed at the video level before any augmentation to prevent data leakage. Val and test sets are never augmented.
+## Important: The train/val/test split is performed at the video level before any augmentation to prevent data leakage. Val and test sets are never augmented.
 
 
-Pipeline
+## Pipeline
 Videos → Train/Val/Test Split → Augmentation (train only)
 
        → PPG Extraction → PPG Maps → CNN / XceptionNet → Evaluation
@@ -122,8 +109,8 @@ PPG_Maps/
         └── fake/
 
 
-Models
-Phase 6a — Baseline CNN (from scratch)
+# Models
+## Phase 6a — Baseline CNN (from scratch)
 Input (224, 224, 3)
 
 → Conv2D(32, 3×3) + ReLU + MaxPool(2×2)
@@ -138,24 +125,19 @@ Input (224, 224, 3)
 
 → Dense(2, softmax)
 
-Setting
-Value
-Optimizer
-Adam
-Learning rate
-1e-3
-Loss
-categorical_crossentropy
-Batch size
-32
-Early stopping
-patience = 10
-Seed
-42
-Est. training time
-~30–45 mins (Colab T4)
+## ⚙️ Training Configuration
 
-Phase 6b — XceptionNet (pretrained on ImageNet)
+| Setting             | Value                          |
+|--------------------|--------------------------------|
+| Optimizer          | Adam                           |
+| Learning Rate      | 1e-3                           |
+| Loss Function      | categorical_crossentropy       |
+| Batch Size         | 32                             |
+| Early Stopping     | patience = 10                  |
+| Seed               | 42                             |
+| Est. Training Time | ~30–45 mins (Colab T4)         |
+
+## Phase 6b — XceptionNet (pretrained on ImageNet)
 Custom head:
 
 GlobalAveragePooling2D
@@ -166,86 +148,55 @@ GlobalAveragePooling2D
 
 → Dense(2, softmax)
 
-Training strategy:
-
-Phase
-Layers
-LR
-Epochs
-A — Head only
-Base frozen
-1e-3
-15–20
-B — Fine-tune
-Last 20 layers unfrozen
-1e-5
-20–30
+## Training strategy:
 
 
-Setting
-Value
-Optimizer
-Adam
-Loss
-categorical_crossentropy
-Batch size
-16
-LR scheduler
-ReduceLROnPlateau (factor=0.5, patience=7)
-Early stopping
-patience = 12
-Class weights
-Computed from training set
-Seed
-42
-Est. training time
-~2 hrs (Colab T4)
+| Phase            | Layers                     | Learning Rate | Epochs  |
+|------------------|---------------------------|---------------|---------|
+| A — Head only    | Base frozen               | 1e-3          | 15–20   |
+| B — Fine-tune    | Last 20 layers unfrozen   | 1e-5          | 20–30   |
+
+
+## ⚙️ Training Configuration (Advanced)
+
+| Setting             | Value                                      |
+|--------------------|--------------------------------------------|
+| Optimizer          | Adam                                       |
+| Loss Function      | categorical_crossentropy                   |
+| Batch Size         | 16                                         |
+| LR Scheduler       | ReduceLROnPlateau (factor=0.5, patience=7) |
+| Early Stopping     | patience = 12                              |
+| Class Weights      | Computed from training set                 |
+| Seed               | 42                                         |
+| Est. Training Time | ~2 hrs (Colab T4)                          |
 
 
 
-Evaluation
-Metrics (both models)
-Accuracy
-F1 (real class, fake class, macro)
-AUC-ROC
-Confusion matrix
-Expected Results
-Metric
-Baseline CNN
-XceptionNet
-Accuracy
-65–72%
-82–88%
-AUC-ROC
-0.68–0.75
-0.85–0.92
-F1 macro
-0.63–0.70
-0.82–0.87
-Overfitting gap
-Higher
-< 8%
-Per-manipulation gap
-Uncontrolled
-< 10%
+## Evaluation
 
+| Metric                | Baseline CNN | XceptionNet |
+|----------------------|--------------|-------------|
+| Accuracy             | 65–72%       | 82–88%      |
+| AUC-ROC              | 0.68–0.75    | 0.85–0.92   |
+| F1 (Macro)           | 0.63–0.70    | 0.82–0.87   |
+| Overfitting Gap      | Higher       | < 8%        |
+| Per-manipulation Gap | Uncontrolled | < 10%       |
 Per-Manipulation Breakdown
 Accuracy, F1, and AUC reported separately for: original · Deepfakes · Face2Face · FaceSwap · NeuralTextures · FaceShifter · DeepFakeDetection · Celeb-real · Celeb-synthesis
 
 Goal: max accuracy gap across manipulation types < 10%.
-Cross-Dataset Generalisation (XceptionNet only)
-Train → Test
-Expected Accuracy
-FF++ → CelebDF v2
-~75–82%
-CelebDF v2 → FF++
-~72–80%
-Both → Both
-~82–88%
+## Cross-Dataset Generalisation (XceptionNet only)
+
+
+| Train → Test            | Expected Accuracy |
+|------------------------|------------------|
+| FF++ → CelebDF v2      | ~75–82%          |
+| CelebDF v2 → FF++      | ~72–80%          |
+| Both → Both            | ~82–88%          |
 
 
 
-Notebook Structure
+## Notebook Structure
 Notebook 1 — Preprocessing_Final.ipynb (CPU heavy)
 Cells 1–5: Setup, paths, constants
 Cell 6: Train/val/test split at video level
@@ -268,71 +219,33 @@ Cell 13: Per-manipulation fairness breakdown
 Cell 14: Cross-dataset evaluation (XceptionNet)
 
 
-Timeline
-Phase
-Task
-Time
-Platform
-1
-Process remaining FF++ videos
-30 mins
-Colab
-1
-Sample + verify CelebDF v2
-30 mins
-Colab
-2
-Train/val/test split
-10 mins
-Colab
-3
-Horizontal flip augmentation
-30 mins
-Colab
-4
-PPG extraction — train (~3,808 videos)
-2.5 hrs
-Colab GPU
-4
-PPG extraction — val/test (~476 videos)
-30 mins
-Colab GPU
-5
-Build metadata CSV
-5 mins
-Colab
-6a
-Baseline CNN training
-45 mins
-Colab GPU
-6b
-XceptionNet Phase A
-1 hr
-Colab GPU
-6b
-XceptionNet Phase B fine-tuning
-1 hr
-Colab GPU
-7
-Full evaluation + comparison
-45 mins
-Colab
-Total
+## Project Timeline
 
-
-~7.75 hrs
+| Phase | Task                                      | Time      | Platform     |
+|------|-------------------------------------------|----------|-------------|
+| 1    | Process remaining FF++ videos              | 30 mins  | Colab       |
+| 1    | Sample + verify CelebDF v2                | 30 mins  | Colab       |
+| 2    | Train/val/test split                     | 10 mins  | Colab       |
+| 3    | Horizontal flip augmentation              | 30 mins  | Colab       |
+| 4    | PPG extraction — train (~3,808 videos)    | 2.5 hrs  | Colab GPU   |
+| 4    | PPG extraction — val/test (~476 videos)   | 30 mins  | Colab GPU   |
+| 5    | Build metadata CSV                        | 5 mins   | Colab       |
+| 6a   | Baseline CNN training                     | 45 mins  | Colab GPU   |
+| 6b   | XceptionNet Phase A                       | 1 hr     | Colab GPU   |
+| 6b   | XceptionNet Phase B fine-tuning           | 1 hr     | Colab GPU   |
+| 7    | Full evaluation + comparison              | 45 mins  | Colab       |
+| **Total** |                                       | **~7.75 hrs** |             |
 
 
 
 
-
-Fairness & Limitations
+## Fairness & Limitations
 The baseline CNN trained from scratch on identical data achieves ~65–72% accuracy, confirming that XceptionNet's pretrained feature representations provide a substantial benefit for PPG-based deepfake detection. XceptionNet also demonstrates a lower per-manipulation accuracy gap, indicating improved generalisation fairness across manipulation types.
 
-Known limitation: Both FF++ and CelebDF v2 have a known European demographic skew. Demographic fairness analysis is limited as a result and is recommended as future work using datasets with better demographic coverage (e.g. DFDC).
+## Known limitation: Both FF++ and CelebDF v2 have a known European demographic skew. Demographic fairness analysis is limited as a result and is recommended as future work using datasets with better demographic coverage (e.g. DFDC).
 
 
-Requirements
+## Requirements
 Python 3.8+
 TensorFlow / Keras
 OpenCV
